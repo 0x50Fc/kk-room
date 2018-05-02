@@ -1,0 +1,19 @@
+
+syntax = "proto3";
+
+package kk;
+
+message Frame {
+    /**
+	 * 帧时间
+	 */
+    int64 timestamp = 1;
+    /**
+	 * 帧类型
+	 */
+    int32 type = 2;
+    /**
+	 * 帧数据
+	 */
+    bytes data = 3;
+}

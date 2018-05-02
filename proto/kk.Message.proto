@@ -1,0 +1,41 @@
+
+syntax = "proto3";
+
+import "kk.Frame.proto";
+
+package kk;
+
+message Message {
+
+	enum Type { 
+	   PING = 0;
+	   PONG = 1; 
+	   FRAME = 2;
+ 	}
+
+	/**
+	 * 消息类型
+	 */
+	Type type = 1;		
+	/**
+	 * 房间ID
+	 */
+	int64 roomId = 2;	
+	/**
+	 * 客户端请求时间
+	 * @type {int64}
+	 */
+	 int64 atime = 3;
+	 /**
+	  * 到达服务端时间
+	  * @type {int64}
+	  */
+	 int64 dtime = 4;
+	 
+	 /**
+	  * 同步帧
+	  * @type {Frame}
+	  */
+	repeated Frame frame = 5;
+
+}
