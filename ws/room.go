@@ -3,6 +3,7 @@ package ws
 import (
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -10,28 +11,48 @@ import (
 	"github.com/hailongz/kk-room/room"
 )
 
-func Index(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
+func Room(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 
 	var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }} // use default options
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		log.Println(r.URL)
+		query := r.URL.Query()
+
+		roomId := query.Get("id")
+
+		if roomId == "" {
+			w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(400)
+			return
+		}
+
+		iid, _ := strconv.ParseInt(roomId, 10, 64)
+
+		R := server.RoomGet(iid)
+
+		if R == nil {
+			w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(400)
+			return
+		}
 
 		c, err := upgrader.Upgrade(w, r, nil)
 
 		if err != nil {
-			log.Print("upgrade:", err)
+			w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(400)
+			w.Write([]byte(err.Error()))
 			return
 		}
 
 		log.Println("Connected: ", r.RemoteAddr)
 
-		var rom room.IRoom = nil
-
 		id := server.AutoId()
 
 		ch := room.NewWSChannel(id, c, 204800)
+
+		R.AddChannel(ch)
 
 		defer ch.Close()
 
@@ -48,23 +69,15 @@ func Index(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 				}
 
 				if message.Type == kk.Message_PING {
+					message.RoomId = iid
 					message.Dtime = (time.Now().UnixNano() / 1000000)
 					message.Type = kk.Message_PONG
 					ch.Send(message)
-				} else if message.Type == kk.Message_FRAME {
+				} else {
 
-					if rom == nil {
-						roomId := message.RoomId
-						rom = server.RoomGet(roomId)
-						if rom != nil {
-							rom.AddChannel(ch)
-						}
-					}
-
-					if rom != nil {
-						message.Dtime = (time.Now().UnixNano() / 1000000)
-						rom.Send(message)
-					}
+					message.RoomId = iid
+					message.Dtime = (time.Now().UnixNano() / 1000000)
+					R.Send(message)
 
 				}
 
@@ -75,9 +88,7 @@ func Index(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if rom != nil {
-			rom.RemoveChannel(ch)
-		}
+		R.RemoveChannel(ch)
 
 	}
 }

@@ -48,7 +48,7 @@ func main() {
 
 	}
 
-	http.HandleFunc("/ws", ws.Index(server))
+	http.HandleFunc("/room", ws.Room(server))
 	log.Printf("Room Server %s\n", *addr)
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }
