@@ -22,8 +22,9 @@ func Room(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 		roomId := query.Get("id")
 
 		if roomId == "" {
+			w.WriteHeader(http.StatusBadRequest)
 			w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-			w.WriteHeader(400)
+			w.Write([]byte("未找到房间ID"));
 			return
 		}
 
@@ -32,17 +33,18 @@ func Room(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 		R := server.RoomGet(iid)
 
 		if R == nil {
+			w.WriteHeader(http.StatusBadRequest)
 			w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-			w.WriteHeader(400)
+			w.Write([]byte("未找到房间ID"));
 			return
 		}
 
 		c, err := upgrader.Upgrade(w, r, nil)
 
 		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
 			w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-			w.WriteHeader(400)
-			w.Write([]byte(err.Error()))
+			w.Write([]byte(err.Error()));
 			return
 		}
 
