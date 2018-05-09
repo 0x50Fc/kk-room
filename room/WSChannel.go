@@ -42,6 +42,7 @@ func NewWSChannel(id int64, conn *websocket.Conn, size int32) *WSChannel {
 					v.status = ChannelStatusFail
 					v.err = err
 					run = false
+					close(v.c)
 					break
 				}
 
@@ -51,6 +52,7 @@ func NewWSChannel(id int64, conn *websocket.Conn, size int32) *WSChannel {
 					v.status = ChannelStatusFail
 					v.err = err
 					run = false
+					close(v.c)
 					break
 				}
 
@@ -78,6 +80,7 @@ func NewWSChannel(id int64, conn *websocket.Conn, size int32) *WSChannel {
 				v.status = ChannelStatusFail
 				v.err = err
 				run = false
+				close(v.c)
 				break
 			}
 
@@ -91,11 +94,13 @@ func NewWSChannel(id int64, conn *websocket.Conn, size int32) *WSChannel {
 					v.status = ChannelStatusFail
 					v.err = err
 					run = false
+					close(v.c)
 					break
 				}
 
 				select {
 				case v.r <- &message:
+					break
 				case <-v.c:
 					run = false
 					break
@@ -115,7 +120,9 @@ func NewWSChannel(id int64, conn *websocket.Conn, size int32) *WSChannel {
  * 发送消息
  */
 func (C *WSChannel) Send(message *kk.Message) {
-	C.w <- message
+	if C.status == ChannelStatusConnected {
+		C.w <- message
+	}
 }
 
 /**
@@ -150,7 +157,10 @@ func (C *WSChannel) GetError() error {
  * 关闭
  */
 func (C *WSChannel) Close() {
-	close(C.c)
+	if C.status == ChannelStatusConnected {
+		C.status = ChannelStatusDisconnected
+		close(C.c)
+	}
 }
 
 /**
