@@ -49,8 +49,11 @@ func NewWSChannel(id int64, conn *websocket.Conn, size int32) *WSChannel {
 				err = conn.WriteMessage(websocket.BinaryMessage, data)
 
 				if err != nil {
-					v.status = ChannelStatusFail
-					v.err = err
+					if v.status == ChannelStatusConnected {
+						v.status = ChannelStatusFail
+						v.err = err
+						close(v.c)
+					}
 					run = false
 					close(v.c)
 					break
