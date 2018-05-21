@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"github.com/golang/protobuf/proto"
 	"log"
 	"net/http"
 	"strconv"
@@ -39,7 +40,7 @@ func Room(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		c, err := upgrader.Upgrade(w, r, nil)
+		conn, err := upgrader.Upgrade(w, r, nil)
 
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -48,49 +49,65 @@ func Room(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Println("Connected: ", r.RemoteAddr)
+		log.Println("[" +r.RemoteAddr+ "] [OPEN]")
 
 		id := server.AutoId()
 
-		ch := room.NewWSChannel(id, c, 204800)
+		log.Println("[" +r.RemoteAddr+ "] [ID]" ,id)
+
+		ch := room.NewWSChannel(id, conn)
 
 		R.AddChannel(ch)
 
 		defer ch.Close()
 
-		run := true
+		for {
 
-		for run {
-			select {
-			case message := <-ch.ReadChannel():
+			mType,data,err := conn.ReadMessage()
 
-				if message == nil {
-					log.Printf("Disconnected: %s %s\n", r.RemoteAddr, ch.GetError())
-					run = false
+			if err != nil {
+				log.Println("[" +r.RemoteAddr+ "] [ERROR]",err)
+				break
+			}
+
+			if mType != websocket.BinaryMessage {
+				log.Println("[" +r.RemoteAddr+ "] [ERROR] Message Type Not Is Binary")
+				break
+			}
+
+			message := kk.Message{}
+
+			err = proto.Unmarshal(data,&message)
+
+			if err != nil {
+				log.Println("[" +r.RemoteAddr+ "] [ERROR]",err)
+				break
+			}
+
+			if message.Type == kk.Message_PING {
+
+				message.RoomId = iid
+				message.Dtime = (time.Now().UnixNano() / 1000000)
+				message.Type = kk.Message_PONG
+				err = ch.SendMessage(&message)
+
+				if err != nil {
+					log.Println("[" +r.RemoteAddr+ "] [ERROR]",err)
 					break
 				}
 
-				if message.Type == kk.Message_PING {
-					message.RoomId = iid
-					message.Dtime = (time.Now().UnixNano() / 1000000)
-					message.Type = kk.Message_PONG
-					ch.Send(message)
-				} else {
+			} else {
 
-					message.RoomId = iid
-					message.Dtime = (time.Now().UnixNano() / 1000000)
-					R.Send(message)
+				message.RoomId = iid
+				message.Dtime = (time.Now().UnixNano() / 1000000)
+				R.Send(&message)
 
-				}
-
-			case <-ch.CloseChannel():
-				log.Printf("Disconnected: %s %s\n", r.RemoteAddr, ch.GetError())
-				run = false
-				break
 			}
 		}
 
 		R.RemoveChannel(ch)
+
+		log.Println("[" +r.RemoteAddr+ "] [CLOSE]")
 
 	}
 }

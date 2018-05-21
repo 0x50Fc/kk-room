@@ -1,7 +1,9 @@
 package room
 
 import (
+	"github.com/golang/protobuf/proto"
 	"github.com/hailongz/kk-room/proto/golang/kk"
+	"log"
 )
 
 type IRoom interface {
@@ -83,9 +85,17 @@ func (R *Room) Send(message *kk.Message) {
 
 	R.ch <- func() {
 
-		for _, channel := range R.channels {
-			channel.Send(message)
+		data,err := proto.Marshal(message)
+
+		if( err != nil) {
+			log.Println("[ROOM] [ERROR]" , err)
+		} else {
+			for _, channel := range R.channels {
+				channel.Send(data)
+			}
 		}
+
+		
 
 	}
 }

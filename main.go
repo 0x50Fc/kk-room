@@ -25,7 +25,7 @@ func main() {
 
 		go func() {
 
-			log.Printf("Room Admin %s\n", *arg_admin)
+			log.Printf("[ADMIN] %s\n", *arg_admin)
 
 			mux := http.NewServeMux()
 
@@ -49,6 +49,6 @@ func main() {
 	}
 
 	http.HandleFunc("/room", ws.Room(server))
-	log.Printf("Room Server %s\n", *addr)
+	log.Printf("[WS] %s\n", *addr)
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }
