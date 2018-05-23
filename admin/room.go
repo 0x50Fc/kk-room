@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/hailongz/kk-room/room"
 )
@@ -16,11 +17,19 @@ func RoomCreate(server room.IServer) func(w http.ResponseWriter, r *http.Request
 
 		data := map[string]interface{}{}
 
-		room := server.RoomCreate()
+		inputData := GetInputData(r)
 
-		data["roomId"] = room.GetId()
-		data["errcode"] = 200
-		data["errmsg"] = "成功创建房间"
+		id := inputData["id"]
+
+		iid, _ := strconv.ParseInt(id, 10, 64)
+
+		expires, _ := strconv.ParseInt(inputData["expires"], 10, 64)
+
+		room := server.RoomCreate(iid, time.Duration(expires)*time.Second)
+
+		data["id"] = room.GetId()
+		data["errno"] = 200
+		data["errmsg"] = "成功"
 
 		SetOutputData(data, w)
 
@@ -41,23 +50,24 @@ func RoomExit(server room.IServer) func(w http.ResponseWriter, r *http.Request) 
 		for {
 
 			if !ok || id == "" {
-				data["errcode"] = 400
+				data["errno"] = 400
 				data["errmsg"] = "未找到房间ID"
 				break
 			}
 
-			iid, err := strconv.ParseInt(id, 16, 64)
+			iid, err := strconv.ParseInt(id, 10, 64)
 
 			if err != nil {
-				data["errcode"] = 401
+				data["errno"] = 401
 				data["errmsg"] = "错误的房间ID"
 				break
 			}
 
 			server.RoomRemove(iid)
 
-			data["errcode"] = 200
-			data["errmsg"] = "成功结束房间"
+			data["id"] = iid
+			data["errno"] = 200
+			data["errmsg"] = "成功"
 
 			break
 		}
@@ -80,15 +90,15 @@ func RoomGet(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 		for {
 
 			if !ok || id == "" {
-				data["errcode"] = 400
+				data["errno"] = 400
 				data["errmsg"] = "未找到房间ID"
 				break
 			}
 
-			iid, err := strconv.ParseInt(id, 16, 64)
+			iid, err := strconv.ParseInt(id, 10, 64)
 
 			if err != nil {
-				data["errcode"] = 401
+				data["errno"] = 401
 				data["errmsg"] = "错误的房间ID"
 				break
 			}
@@ -96,17 +106,33 @@ func RoomGet(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 			room := server.RoomGet(iid)
 
 			if room == nil {
-				data["errcode"] = 404
+				data["errno"] = 404
 				data["errmsg"] = "未找到房间"
 				break
 			}
 
-			data["roomId"] = room.GetId()
-			data["errcode"] = 200
-			data["errmsg"] = "成功结束房间"
+			data["id"] = room.GetId()
+			data["errno"] = 200
+			data["errmsg"] = "成功"
 
 			break
 		}
+
+		SetOutputData(data, w)
+	}
+}
+
+func RoomList(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		log.Println(r.URL)
+
+		data := map[string]interface{}{}
+
+		data["items"] = server.RoomList()
+		data["errno"] = 200
+		data["errmsg"] = "成功"
 
 		SetOutputData(data, w)
 	}

@@ -1,9 +1,12 @@
 package room
 
+import "time"
+
 type IServer interface {
-	RoomCreate() IRoom
+	RoomCreate(id int64, expires time.Duration) IRoom
 	RoomRemove(id int64)
 	RoomGet(id int64) IRoom
+	RoomList() []int64
 	AutoId() int64
 	GetRoomCount() int
 	Exit()
@@ -43,19 +46,45 @@ func NewServer(size int) IServer {
 	return &v
 }
 
-func (S *Server) RoomCreate() IRoom {
+func (S *Server) RoomCreate(id int64, expires time.Duration) IRoom {
+
 	var room IRoom = nil
 
 	ch := make(chan bool)
 
 	S.ch <- func() {
 
-		S.id = S.id + 1
+		if id != 0 {
+			room = S.rooms[id]
+		}
 
-		room = NewRoom(S.id, 20480)
+		if room != nil {
+			ch <- true
+			return
+		}
+
+		if id == 0 {
+			for {
+				S.id = S.id + 1
+				id = S.id
+				if S.rooms[id] == nil {
+					break
+				}
+			}
+		}
+
+		room = NewRoom(id, 20480)
 
 		S.rooms[room.GetId()] = room
 		S.roomCount = S.roomCount + 1
+
+		if expires != 0 {
+			id := room.GetId()
+			go func() {
+				time.Sleep(expires)
+				S.RoomRemove(id)
+			}()
+		}
 
 		ch <- true
 	}
@@ -97,6 +126,28 @@ func (S *Server) RoomGet(id int64) IRoom {
 	close(ch)
 
 	return room
+}
+
+func (S *Server) RoomList() []int64 {
+
+	ids := []int64{}
+
+	ch := make(chan bool)
+
+	S.ch <- func() {
+
+		for id, _ := range S.rooms {
+			ids = append(ids, id)
+		}
+
+		ch <- true
+	}
+
+	<-ch
+
+	close(ch)
+
+	return ids
 }
 
 func (S *Server) AutoId() int64 {

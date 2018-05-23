@@ -1,9 +1,10 @@
 package room
 
 import (
+	"log"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/hailongz/kk-room/proto/golang/kk"
-	"log"
 )
 
 type IRoom interface {
@@ -30,6 +31,8 @@ func NewRoom(id int64, size int) IRoom {
 
 	go func() {
 
+		log.Println("[ROOM] [RUN]", id)
+
 		for v.run {
 			select {
 			case fn := <-v.ch:
@@ -43,6 +46,7 @@ func NewRoom(id int64, size int) IRoom {
 
 		close(v.ch)
 
+		log.Println("[ROOM] [EXIT]", id)
 	}()
 
 	return &v
@@ -85,17 +89,15 @@ func (R *Room) Send(message *kk.Message) {
 
 	R.ch <- func() {
 
-		data,err := proto.Marshal(message)
+		data, err := proto.Marshal(message)
 
-		if( err != nil) {
-			log.Println("[ROOM] [ERROR]" , err)
+		if err != nil {
+			log.Println("[ROOM] [ERROR]", err)
 		} else {
 			for _, channel := range R.channels {
 				channel.Send(data)
 			}
 		}
-
-		
 
 	}
 }

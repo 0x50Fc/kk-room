@@ -7,36 +7,94 @@ import (
 	"time"
 
 	"github.com/hailongz/kk-room/admin"
+	"github.com/hailongz/kk-room/app"
+	H "github.com/hailongz/kk-room/app/http"
 	"github.com/hailongz/kk-room/room"
 	"github.com/hailongz/kk-room/ws"
 )
 
-var addr = flag.String("addr", ":8080", "ws port")
-var arg_admin = flag.String("admin", ":8081", "admin port")
+var broadcast_addr = flag.String("broadcast", "", "广播服务地址 如 :8080")
+var admin_addr = flag.String("admin", "", "广播管理地址 如 :8081")
+var app_addr = flag.String("app", "", "应用管理地址 如 :8082")
 var server room.IServer = nil
+var container app.IContainer = nil
 
 func main() {
 	flag.Parse()
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
 
-	server = room.NewServer(2048)
+	if *broadcast_addr != "" {
 
-	if *arg_admin != "" {
+		if server == nil {
+			server = room.NewServer(204800)
+		}
 
 		go func() {
 
-			log.Printf("[ADMIN] %s\n", *arg_admin)
+			log.Printf("[BROADCAST] %s\n", *broadcast_addr)
 
 			mux := http.NewServeMux()
 
-			mux.HandleFunc("/room/create", admin.RoomCreate(server))
-			mux.HandleFunc("/room/get", admin.RoomGet(server))
-			mux.HandleFunc("/room/exit", admin.RoomExit(server))
-			mux.HandleFunc("/runtime/state", admin.RuntimeState(server))
-			mux.HandleFunc("/runtime/conns", admin.RuntimeConns(server))
+			mux.HandleFunc("/room", ws.Room(server))
 
 			s := &http.Server{
-				Addr:           *arg_admin,
+				Addr:           *broadcast_addr,
+				Handler:        mux,
+				ReadTimeout:    10 * time.Second,
+				WriteTimeout:   10 * time.Second,
+				MaxHeaderBytes: 1 << 20,
+			}
+
+			log.Fatal(s.ListenAndServe())
+		}()
+
+		if *admin_addr != "" {
+
+			go func() {
+
+				log.Printf("[ADMIN] %s\n", *admin_addr)
+
+				mux := http.NewServeMux()
+
+				mux.HandleFunc("/room/create", admin.RoomCreate(server))
+				mux.HandleFunc("/room/get", admin.RoomGet(server))
+				mux.HandleFunc("/room/exit", admin.RoomExit(server))
+				mux.HandleFunc("/room/list", admin.RoomList(server))
+				mux.HandleFunc("/runtime/state", admin.RuntimeState(server))
+				mux.HandleFunc("/runtime/conns", admin.RuntimeConns(server))
+
+				s := &http.Server{
+					Addr:           *admin_addr,
+					Handler:        mux,
+					ReadTimeout:    10 * time.Second,
+					WriteTimeout:   10 * time.Second,
+					MaxHeaderBytes: 1 << 20,
+				}
+
+				log.Fatal(s.ListenAndServe())
+			}()
+
+		}
+	}
+
+	if *app_addr != "" {
+
+		container = app.NewContainer()
+
+		go func() {
+
+			log.Printf("[APP] %s\n", *app_addr)
+
+			mux := http.NewServeMux()
+
+			mux.HandleFunc("/app/open", H.Open(container))
+			mux.HandleFunc("/app/get", H.Get(container))
+			mux.HandleFunc("/app/exit", H.Exit(container))
+			mux.HandleFunc("/app/command", H.Command(container))
+			mux.HandleFunc("/app/list", H.List(container))
+
+			s := &http.Server{
+				Addr:           *app_addr,
 				Handler:        mux,
 				ReadTimeout:    10 * time.Second,
 				WriteTimeout:   10 * time.Second,
@@ -48,7 +106,12 @@ func main() {
 
 	}
 
-	http.HandleFunc("/room", ws.Room(server))
-	log.Printf("[WS] %s\n", *addr)
-	log.Fatal(http.ListenAndServe(*addr, nil))
+	if *broadcast_addr != "" || *app_addr != "" {
+		ch := make(chan bool)
+		<-ch
+		close(ch)
+	} else {
+		flag.PrintDefaults()
+	}
+
 }
