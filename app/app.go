@@ -140,6 +140,7 @@ func (A *Application) Exit() {
 
 func (A *Application) RunCommand(command []byte) {
 	if A.stdin != nil {
+		log.Println("[APP] [COMMAND]", string(command))
 		A.stdin.Run(append(command, '\n'))
 	}
 }

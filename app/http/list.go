@@ -1,6 +1,7 @@
 package http
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/hailongz/kk-room/app"
@@ -9,6 +10,8 @@ import (
 func List(container app.IContainer) func(w http.ResponseWriter, r *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		log.Println(r.URL)
 
 		ch := make(chan bool)
 

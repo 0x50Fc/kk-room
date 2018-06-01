@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -11,6 +12,8 @@ import (
 func Command(container app.IContainer) func(w http.ResponseWriter, r *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		log.Println(r.URL)
 
 		data := GetInputData(r)
 
