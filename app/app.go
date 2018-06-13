@@ -65,8 +65,8 @@ func (C *CommandStream) Close() {
 type Application struct {
 	id      int64
 	cmd     *exec.Cmd
-	stdin   *CommandStream
 	running bool
+	in      chan []byte
 }
 
 func (A *Application) Write(p []byte) (n int, err error) {
@@ -77,7 +77,7 @@ func (A *Application) Write(p []byte) (n int, err error) {
 func Open(id int64, path string, query map[string]string, expires time.Duration, cb chan int64) *Application {
 	v := Application{}
 	v.id = id
-	v.stdin = NewCommandStream()
+	v.in = make(chan []byte, 4)
 	v.running = false
 
 	a, _ := filepath.Abs("./bin/kk-app")
@@ -92,9 +92,31 @@ func Open(id int64, path string, query map[string]string, expires time.Duration,
 
 	v.cmd = exec.Command(a, args...)
 	v.cmd.Dir = p
-	v.cmd.Stderr = os.Stderr
 	v.cmd.Stdout = os.Stdout
-	v.cmd.Stdin = v.stdin
+	v.cmd.Stderr = os.Stderr
+
+	stdin, _ := v.cmd.StdinPipe()
+
+	go func() {
+
+		defer stdin.Close()
+
+		for {
+
+			v, ok := <-v.in
+
+			if ok {
+				_, err := stdin.Write(v)
+				if err != nil {
+					log.Println("[APP] [STDIN] [ERROR]", err)
+					break
+				}
+			} else {
+				break
+			}
+		}
+
+	}()
 
 	go func() {
 
@@ -111,6 +133,8 @@ func Open(id int64, path string, query map[string]string, expires time.Duration,
 
 		v.cmd = nil
 
+		close(v.in)
+		v.in = nil
 		cb <- id
 	}()
 
@@ -129,18 +153,12 @@ func (A *Application) GetId() int64 {
 }
 
 func (A *Application) Exit() {
-	if A.stdin != nil {
-		stdin := A.stdin
-		A.stdin = nil
-		stdin.Run([]byte("exit\n"))
-		stdin.Close()
-	}
-
+	A.RunCommand([]byte("exit"))
 }
 
 func (A *Application) RunCommand(command []byte) {
-	if A.stdin != nil {
+	if A.in != nil {
 		log.Println("[APP] [COMMAND]", string(command))
-		A.stdin.Run(append(command, '\n'))
+		A.in <- append(command, '\n')
 	}
 }

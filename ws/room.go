@@ -1,11 +1,12 @@
 package ws
 
 import (
-	"github.com/golang/protobuf/proto"
 	"log"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/golang/protobuf/proto"
 
 	"github.com/gorilla/websocket"
 	"github.com/hailongz/kk-room/proto/golang/kk"
@@ -25,7 +26,7 @@ func Room(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 		if roomId == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-			w.Write([]byte("未找到房间ID"));
+			w.Write([]byte("未找到房间ID"))
 			return
 		}
 
@@ -36,7 +37,7 @@ func Room(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 		if R == nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-			w.Write([]byte("未找到房间ID"));
+			w.Write([]byte("未找到房间ID"))
 			return
 		}
 
@@ -45,17 +46,17 @@ func Room(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-			w.Write([]byte(err.Error()));
+			w.Write([]byte(err.Error()))
 			return
 		}
 
-		log.Println("[" +r.RemoteAddr+ "] [OPEN]")
+		log.Println("[" + r.RemoteAddr + "] [OPEN]")
 
 		id := server.AutoId()
 
-		log.Println("[" +r.RemoteAddr+ "] [ID]" ,id)
+		log.Println("["+r.RemoteAddr+"] [ID]", id)
 
-		ch := room.NewWSChannel(id, conn)
+		ch := room.NewWSChannel(id, conn, 20480)
 
 		R.AddChannel(ch)
 
@@ -63,24 +64,24 @@ func Room(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 
 		for {
 
-			mType,data,err := conn.ReadMessage()
+			mType, data, err := conn.ReadMessage()
 
 			if err != nil {
-				log.Println("[" +r.RemoteAddr+ "] [ERROR]",err)
+				log.Println("["+r.RemoteAddr+"] [ERROR]", err)
 				break
 			}
 
 			if mType != websocket.BinaryMessage {
-				log.Println("[" +r.RemoteAddr+ "] [ERROR] Message Type Not Is Binary")
+				log.Println("[" + r.RemoteAddr + "] [ERROR] Message Type Not Is Binary")
 				break
 			}
 
 			message := kk.Message{}
 
-			err = proto.Unmarshal(data,&message)
+			err = proto.Unmarshal(data, &message)
 
 			if err != nil {
-				log.Println("[" +r.RemoteAddr+ "] [ERROR]",err)
+				log.Println("["+r.RemoteAddr+"] [ERROR]", err)
 				break
 			}
 
@@ -92,7 +93,7 @@ func Room(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 				err = ch.SendMessage(&message)
 
 				if err != nil {
-					log.Println("[" +r.RemoteAddr+ "] [ERROR]",err)
+					log.Println("["+r.RemoteAddr+"] [ERROR]", err)
 					break
 				}
 
@@ -107,7 +108,7 @@ func Room(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 
 		R.RemoveChannel(ch)
 
-		log.Println("[" +r.RemoteAddr+ "] [CLOSE]")
+		log.Println("[" + r.RemoteAddr + "] [CLOSE]")
 
 	}
 }
