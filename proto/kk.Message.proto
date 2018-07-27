@@ -44,4 +44,10 @@ message Message {
 	  */
 	bytes data = 6;
 
+	/**
+	  * 
+	  * @type {int64}
+	  */
+	int64 seed = 7;
+
 }

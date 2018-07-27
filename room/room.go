@@ -20,6 +20,7 @@ type Room struct {
 	channels map[int64]IChannel
 	ch       chan func()
 	run      bool
+	seed     int64
 }
 
 func NewRoom(id int64, size int) IRoom {
@@ -28,6 +29,7 @@ func NewRoom(id int64, size int) IRoom {
 	v.id = id
 	v.ch = make(chan func(), size)
 	v.run = true
+	v.seed = 0
 
 	go func() {
 
@@ -88,6 +90,10 @@ func (R *Room) Send(message *kk.Message) {
 	}
 
 	R.ch <- func() {
+
+		message.Seed = R.seed + 1
+
+		R.seed = message.Seed
 
 		data, err := proto.Marshal(message)
 
