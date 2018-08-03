@@ -67,12 +67,12 @@ func Room(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 			mType, data, err := conn.ReadMessage()
 
 			if err != nil {
-				log.Println("["+r.RemoteAddr+"] [ERROR]", err)
+				log.Printf("[%s] [%d] [ERROR] %s\n", r.RemoteAddr, id, err.Error())
 				break
 			}
 
 			if mType != websocket.BinaryMessage {
-				log.Println("[" + r.RemoteAddr + "] [ERROR] Message Type Not Is Binary")
+				log.Printf("[%s] [%d] [ERROR] %s\n", r.RemoteAddr, id, "Message Type Not Is Binary")
 				break
 			}
 
@@ -81,7 +81,7 @@ func Room(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 			err = proto.Unmarshal(data, &message)
 
 			if err != nil {
-				log.Println("["+r.RemoteAddr+"] [ERROR]", err)
+				log.Printf("[%s] [%d] [ERROR] %s\n", r.RemoteAddr, id, err.Error())
 				break
 			}
 
@@ -93,7 +93,7 @@ func Room(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 				err = ch.SendMessage(&message)
 
 				if err != nil {
-					log.Println("["+r.RemoteAddr+"] [ERROR]", err)
+					log.Printf("[%s] [%d] [ERROR] %s\n", r.RemoteAddr, id, err.Error())
 					break
 				}
 
@@ -108,7 +108,7 @@ func Room(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 
 		R.RemoveChannel(ch)
 
-		log.Println("[" + r.RemoteAddr + "] [CLOSE]")
+		log.Printf("[%s] [%d] [CLOSE]\n", r.RemoteAddr, id)
 
 	}
 }
