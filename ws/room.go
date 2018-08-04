@@ -88,6 +88,7 @@ func Room(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 			if message.Type == kk.Message_PING {
 
 				message.RoomId = iid
+				message.From = id
 				message.Dtime = (time.Now().UnixNano() / 1000000)
 				message.Type = kk.Message_PONG
 				err = ch.SendMessage(&message)

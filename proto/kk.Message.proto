@@ -45,9 +45,15 @@ message Message {
 	bytes data = 6;
 
 	/**
-	  * 
+	  * 来源ID
 	  * @type {int64}
 	  */
-	int64 seed = 7;
+	int64 from = 7;
+
+	/**
+	  * 目标ID
+	  * @type {int64}
+	  */
+	string to = 8;
 
 }
