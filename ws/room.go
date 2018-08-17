@@ -101,7 +101,9 @@ func Room(server room.IServer) func(w http.ResponseWriter, r *http.Request) {
 			} else {
 
 				message.RoomId = iid
+				message.From = id
 				message.Dtime = (time.Now().UnixNano() / 1000000)
+
 				R.Send(&message)
 
 			}

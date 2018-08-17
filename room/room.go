@@ -105,11 +105,15 @@ func (R *Room) Send(message *kk.Message) {
 					id, _ := strconv.ParseInt(v, 10, 64)
 					ids[id] = true
 				}
+				// log.Println("[ROOM] [SEND] TO: ", ids)
 			}
 
 			for _, channel := range R.channels {
 				if ids == nil || ids[channel.GetId()] {
 					channel.Send(data)
+					// if ids != nil {
+					// 	log.Println("[ROOM] [SEND] TO: ", channel.GetId())
+					// }
 				}
 			}
 		}

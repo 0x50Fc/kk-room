@@ -52,7 +52,7 @@ message Message {
 
 	/**
 	  * 目标ID
-	  * @type {int64}
+	  * @type {string}
 	  */
 	string to = 8;
 
